@@ -23,7 +23,7 @@
         </div>
       </header>
       <main class="grid">
-        <section class="card balance-card">
+        <section class="card balance-card span-two">
           <div class="card-header">
             <h2>Баланс</h2>
             <span class="chip" id="totalBalanceChip">₽0</span>
@@ -129,7 +129,7 @@
           </div>
         </section>
 
-        <section class="card stats-card">
+        <section class="card stats-card span-two">
           <div class="card-header">
             <h2>Статистика заработка</h2>
             <span class="chip" id="rankIncome">₽0</span>
@@ -154,12 +154,26 @@
           </div>
           <div class="chart">
             <div class="chart-header">
-              <h3>Доход по дням</h3>
-              <select id="chartRange">
-                <option value="7">7 дней</option>
-                <option value="14" selected>14 дней</option>
-                <option value="30">30 дней</option>
-              </select>
+              <h3>Доход</h3>
+              <div class="chart-controls">
+                <select id="chartMode">
+                  <option value="today">Сегодня</option>
+                  <option value="week" selected>Неделя</option>
+                  <option value="month">Месяц</option>
+                  <option value="rank">Конкретный ранг</option>
+                </select>
+                <select id="chartRank" class="hidden">
+                  <option value="1">Ранг 1</option>
+                  <option value="2">Ранг 2</option>
+                  <option value="3">Ранг 3</option>
+                  <option value="4">Ранг 4</option>
+                  <option value="5">Ранг 5</option>
+                  <option value="6">Ранг 6</option>
+                  <option value="7">Ранг 7</option>
+                  <option value="8">Ранг 8</option>
+                  <option value="9">Ранг 9</option>
+                </select>
+              </div>
             </div>
             <svg id="incomeChart" viewBox="0 0 600 200" preserveAspectRatio="none"></svg>
           </div>
@@ -189,6 +203,10 @@
             <input type="text" id="goalName" placeholder="Название цели" />
             <input type="number" id="goalTarget" placeholder="Стоимость" min="0" />
             <input type="number" id="goalSaved" placeholder="Накоплено" min="0" />
+            <label class="checkbox-row">
+              <input type="checkbox" id="goalFromBalance" />
+              С баланса
+            </label>
             <button class="primary-button" id="addGoalButton">Добавить цель</button>
           </div>
           <div class="goals-list" id="goalsList"></div>

@@ -59,7 +59,8 @@ const ui = {
   rankIncome: document.getElementById("rankIncome"),
   rankIncomeAmount: document.getElementById("rankIncomeAmount"),
   incomeChart: document.getElementById("incomeChart"),
-  chartRange: document.getElementById("chartRange"),
+  chartMode: document.getElementById("chartMode"),
+  chartRank: document.getElementById("chartRank"),
   expenseAmount: document.getElementById("expenseAmount"),
   expenseCategory: document.getElementById("expenseCategory"),
   expenseDate: document.getElementById("expenseDate"),
@@ -70,6 +71,7 @@ const ui = {
   goalName: document.getElementById("goalName"),
   goalTarget: document.getElementById("goalTarget"),
   goalSaved: document.getElementById("goalSaved"),
+  goalFromBalance: document.getElementById("goalFromBalance"),
   addGoalButton: document.getElementById("addGoalButton"),
   goalsList: document.getElementById("goalsList"),
   goalsCount: document.getElementById("goalsCount"),
@@ -86,6 +88,8 @@ const ui = {
 const state = {
   data: loadData()
 };
+
+let editingGoalId = null;
 
 function loadData() {
   const saved = localStorage.getItem(storageKey);
@@ -110,6 +114,10 @@ function saveData() {
 
 function formatCurrency(value) {
   return new Intl.NumberFormat("ru-RU", { style: "currency", currency: "RUB", maximumFractionDigits: 0 }).format(value);
+}
+
+function getTotalBalance() {
+  return state.data.balances.cash + state.data.balances.card;
 }
 
 function getRank(exp) {
@@ -149,11 +157,14 @@ function addOperation(type, amount, note, meta = {}) {
 }
 
 function updateBalances() {
-  const total = state.data.balances.cash + state.data.balances.card;
+  const total = getTotalBalance();
   ui.cashBalance.textContent = formatCurrency(state.data.balances.cash);
   ui.cardBalance.textContent = formatCurrency(state.data.balances.card);
   ui.totalBalance.textContent = formatCurrency(total);
   ui.totalBalanceChip.textContent = formatCurrency(total);
+  if (ui.goalFromBalance.checked) {
+    ui.goalSaved.value = total;
+  }
 }
 
 function renderOperations() {
@@ -212,15 +223,43 @@ function renderExpenses() {
 function renderGoals() {
   ui.goalsList.innerHTML = "";
   state.data.goals.forEach((goal) => {
-    const progress = Math.min(100, Math.round((goal.saved / goal.target) * 100) || 0);
+    const savedAmount = goal.fromBalance ? getTotalBalance() : goal.saved;
+    const progress = Math.min(100, Math.round((savedAmount / goal.target) * 100) || 0);
     const item = document.createElement("div");
     item.className = "goal-item";
     item.innerHTML = `
       <strong>${goal.name}</strong>
-      <div class="muted">${formatCurrency(goal.saved)} из ${formatCurrency(goal.target)}</div>
+      <div class="muted">${formatCurrency(savedAmount)} из ${formatCurrency(goal.target)}</div>
       <div class="goal-progress"><span style="width:${progress}%"></span></div>
-      <div class="muted">Осталось ${formatCurrency(Math.max(0, goal.target - goal.saved))}</div>
+      <div class="muted">Осталось ${formatCurrency(Math.max(0, goal.target - savedAmount))}</div>
     `;
+    const actions = document.createElement("div");
+    actions.className = "goal-actions";
+    const editButton = document.createElement("button");
+    editButton.className = "ghost-button";
+    editButton.textContent = "Редактировать";
+    editButton.addEventListener("click", () => {
+      editingGoalId = goal.id;
+      ui.goalName.value = goal.name;
+      ui.goalTarget.value = goal.target;
+      ui.goalFromBalance.checked = Boolean(goal.fromBalance);
+      ui.goalSaved.value = goal.fromBalance ? getTotalBalance() : goal.saved;
+      ui.goalSaved.disabled = goal.fromBalance;
+      ui.addGoalButton.textContent = "Сохранить";
+    });
+    const deleteButton = document.createElement("button");
+    deleteButton.className = "ghost-button danger-button";
+    deleteButton.textContent = "Удалить";
+    deleteButton.addEventListener("click", () => {
+      state.data.goals = state.data.goals.filter((item) => item.id !== goal.id);
+      if (editingGoalId === goal.id) {
+        resetGoalForm();
+      }
+      syncAndRender();
+    });
+    actions.appendChild(editButton);
+    actions.appendChild(deleteButton);
+    item.appendChild(actions);
     ui.goalsList.appendChild(item);
   });
   ui.goalsCount.textContent = state.data.goals.length;
@@ -241,6 +280,9 @@ function renderRank() {
     ui.rankProgress.style.width = `${progress}%`;
   }
   ui.rankSelect.value = String(rankInfo.rank);
+  if (ui.chartMode.value !== "rank") {
+    ui.chartRank.value = String(rankInfo.rank);
+  }
 }
 
 function getDateKey(date) {
@@ -282,18 +324,53 @@ function renderStats() {
   ui.rankIncomeAmount.textContent = formatCurrency(rankTotal);
 }
 
+function updateChartControls() {
+  const isRank = ui.chartMode.value === "rank";
+  ui.chartRank.classList.toggle("hidden", !isRank);
+}
+
+function getIncomeOperations() {
+  return state.data.operations.filter((op) => op.type === "income" || op.type === "contract");
+}
+
+function sumBy(filterFn) {
+  return getIncomeOperations()
+    .filter(filterFn)
+    .reduce((acc, op) => acc + op.amount, 0);
+}
+
 function renderChart() {
-  const days = Number(ui.chartRange.value);
+  const mode = ui.chartMode.value;
   const now = new Date();
   const dataPoints = [];
-  for (let i = days - 1; i >= 0; i -= 1) {
-    const date = new Date(now);
-    date.setDate(now.getDate() - i);
-    const key = getDateKey(date);
-    const sum = state.data.operations
-      .filter((op) => (op.type === "income" || op.type === "contract") && getDateKey(op.date) === key)
-      .reduce((acc, op) => acc + op.amount, 0);
-    dataPoints.push({ key, sum });
+  const incomeOps = getIncomeOperations();
+  if (mode === "today") {
+    const todayKey = getDateKey(now);
+    for (let hour = 0; hour < 24; hour += 1) {
+      const sum = sumBy((op) => getDateKey(op.date) === todayKey && new Date(op.date).getHours() === hour);
+      dataPoints.push({ key: `${hour}`, sum });
+    }
+  } else if (mode === "week" || mode === "month") {
+    const days = mode === "week" ? 7 : 30;
+    for (let i = days - 1; i >= 0; i -= 1) {
+      const date = new Date(now);
+      date.setDate(now.getDate() - i);
+      const key = getDateKey(date);
+      const sum = incomeOps.filter((op) => getDateKey(op.date) === key).reduce((acc, op) => acc + op.amount, 0);
+      dataPoints.push({ key, sum });
+    }
+  } else {
+    const days = 30;
+    const selectedRank = Number(ui.chartRank.value);
+    for (let i = days - 1; i >= 0; i -= 1) {
+      const date = new Date(now);
+      date.setDate(now.getDate() - i);
+      const key = getDateKey(date);
+      const sum = incomeOps
+        .filter((op) => op.rank === selectedRank && getDateKey(op.date) === key)
+        .reduce((acc, op) => acc + op.amount, 0);
+      dataPoints.push({ key, sum });
+    }
   }
 
   const max = Math.max(1, ...dataPoints.map((p) => p.sum));
@@ -362,6 +439,7 @@ function renderAll() {
   renderGoals();
   renderRank();
   renderStats();
+  updateChartControls();
   renderChart();
   renderBackups();
 }
@@ -379,6 +457,16 @@ function emphasizeField(field) {
   if (window.gsap) {
     gsap.fromTo(field, { x: -4 }, { x: 0, duration: 0.2, repeat: 3, yoyo: true });
   }
+}
+
+function resetGoalForm() {
+  editingGoalId = null;
+  ui.goalName.value = "";
+  ui.goalTarget.value = "";
+  ui.goalSaved.value = "";
+  ui.goalFromBalance.checked = false;
+  ui.goalSaved.disabled = false;
+  ui.addGoalButton.textContent = "Добавить цель";
 }
 
 ui.depositButton.addEventListener("click", () => {
@@ -541,20 +629,41 @@ ui.addGoalButton.addEventListener("click", () => {
     emphasizeField(ui.goalTarget);
     return;
   }
-  const saved = Number(ui.goalSaved.value) || 0;
-  state.data.goals.unshift({
-    id: crypto.randomUUID(),
-    name,
-    target,
-    saved
-  });
-  ui.goalName.value = "";
-  ui.goalTarget.value = "";
-  ui.goalSaved.value = "";
+  const fromBalance = ui.goalFromBalance.checked;
+  const saved = fromBalance ? getTotalBalance() : Number(ui.goalSaved.value) || 0;
+  if (editingGoalId) {
+    state.data.goals = state.data.goals.map((goal) =>
+      goal.id === editingGoalId ? { ...goal, name, target, saved, fromBalance } : goal
+    );
+    resetGoalForm();
+  } else {
+    state.data.goals.unshift({
+      id: crypto.randomUUID(),
+      name,
+      target,
+      saved,
+      fromBalance
+    });
+    resetGoalForm();
+  }
   syncAndRender();
 });
 
-ui.chartRange.addEventListener("change", renderChart);
+ui.goalFromBalance.addEventListener("change", () => {
+  if (ui.goalFromBalance.checked) {
+    ui.goalSaved.value = getTotalBalance();
+    ui.goalSaved.disabled = true;
+  } else {
+    ui.goalSaved.disabled = false;
+  }
+});
+
+ui.chartMode.addEventListener("change", () => {
+  updateChartControls();
+  renderChart();
+});
+
+ui.chartRank.addEventListener("change", renderChart);
 
 ui.exportButton.addEventListener("click", () => {
   const blob = new Blob([JSON.stringify(state.data, null, 2)], { type: "application/json" });
