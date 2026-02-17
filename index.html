@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>RP Трекер</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;600;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="styles.css" />
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
+  </head>
+  <body>
+    <div class="app">
+      <header class="app-header">
+        <div>
+          <p class="eyebrow">Персональный трекер RP</p>
+          <h1>Финансы и прогресс</h1>
+        </div>
+        <div class="header-actions">
+          <button class="ghost-button" id="themeToggle">Тема</button>
+          <button class="primary-button" id="quickContract">Быстрый контракт</button>
+        </div>
+      </header>
+      <main class="grid">
+        <section class="card balance-card">
+          <div class="card-header">
+            <h2>Баланс</h2>
+            <span class="chip" id="totalBalanceChip">₽0</span>
+          </div>
+          <div class="balance-grid">
+            <div class="stat">
+              <p>На руках</p>
+              <h3 id="cashBalance">₽0</h3>
+            </div>
+            <div class="stat">
+              <p>На карте</p>
+              <h3 id="cardBalance">₽0</h3>
+            </div>
+            <div class="stat">
+              <p>Общий баланс</p>
+              <h3 id="totalBalance">₽0</h3>
+            </div>
+          </div>
+          <div class="setup">
+            <p class="muted">Стартовые значения</p>
+            <div class="form-row">
+              <input type="number" id="cashStart" placeholder="На руках" min="0" />
+              <input type="number" id="cardStart" placeholder="На карте" min="0" />
+              <button class="ghost-button" id="applyBalanceButton">Задать баланс</button>
+            </div>
+          </div>
+          <div class="form-row">
+            <input type="number" id="depositAmount" placeholder="Сумма перевода" min="0" />
+            <button class="secondary-button" id="depositButton">Положил на карту</button>
+          </div>
+          <div class="form-row">
+            <input type="number" id="incomeAmount" placeholder="Добавить доход" min="0" />
+            <button class="primary-button" id="incomeButton">Добавить доход</button>
+            <button class="ghost-button quick-income" data-amount="1000">+1k</button>
+            <button class="ghost-button quick-income" data-amount="5000">+5k</button>
+            <button class="ghost-button quick-income" data-amount="10000">+10k</button>
+          </div>
+          <div class="form-row">
+            <input type="number" id="expenseAmountQuick" placeholder="Добавить расход" min="0" />
+            <button class="ghost-button" id="expenseQuickButton">Добавить расход</button>
+          </div>
+          <div class="history">
+            <div class="history-header">
+              <h3>История операций</h3>
+              <span class="muted" id="operationsCount">0 записей</span>
+            </div>
+            <div class="history-list" id="operationsList"></div>
+          </div>
+        </section>
+
+        <section class="card contracts-card">
+          <div class="card-header">
+            <h2>Контракты</h2>
+            <span class="chip" id="contractsCount">0</span>
+          </div>
+          <div class="form-grid">
+            <input type="number" id="contractAmount" placeholder="Сумма контракта" min="0" />
+            <input type="text" id="contractTime" placeholder="Время выполнения" />
+            <input type="number" id="contractExp" placeholder="Опыт (авто по рангу)" min="0" />
+            <input type="text" id="contractNote" placeholder="Комментарий" />
+            <button class="primary-button" id="addContractButton">Добавить контракт</button>
+            <div class="quick-row">
+              <button class="ghost-button quick-exp" data-exp="10">+10 опыта</button>
+              <button class="ghost-button quick-exp" data-exp="15">+15 опыта</button>
+              <button class="ghost-button quick-exp" data-exp="20">+20 опыта</button>
+            </div>
+          </div>
+          <div class="contracts-list" id="contractsList"></div>
+        </section>
+
+        <section class="card rank-card">
+          <div class="card-header">
+            <h2>Система рангов</h2>
+            <span class="chip" id="rankChip">Ранг 1</span>
+          </div>
+          <div class="rank-info">
+            <div>
+              <p>Текущий опыт</p>
+              <h3 id="currentExp">0</h3>
+            </div>
+            <div>
+              <p>До следующего ранга</p>
+              <h3 id="expToNext">0</h3>
+            </div>
+          </div>
+          <div class="progress">
+            <div class="progress-bar" id="rankProgress"></div>
+          </div>
+          <div class="form-row">
+            <input type="number" id="expInput" placeholder="Изменить опыт" min="0" />
+            <select id="rankSelect">
+              <option value="1">Ранг 1</option>
+              <option value="2">Ранг 2</option>
+              <option value="3">Ранг 3</option>
+              <option value="4">Ранг 4</option>
+              <option value="5">Ранг 5</option>
+              <option value="6">Ранг 6</option>
+              <option value="7">Ранг 7</option>
+              <option value="8">Ранг 8</option>
+              <option value="9">Ранг 9</option>
+            </select>
+            <button class="secondary-button" id="applyRankButton">Применить</button>
+          </div>
+        </section>
+
+        <section class="card stats-card">
+          <div class="card-header">
+            <h2>Статистика заработка</h2>
+            <span class="chip" id="rankIncome">₽0</span>
+          </div>
+          <div class="stats-grid">
+            <div class="stat">
+              <p>За день</p>
+              <h3 id="dayIncome">₽0</h3>
+            </div>
+            <div class="stat">
+              <p>За неделю</p>
+              <h3 id="weekIncome">₽0</h3>
+            </div>
+            <div class="stat">
+              <p>За всё время</p>
+              <h3 id="allIncome">₽0</h3>
+            </div>
+            <div class="stat">
+              <p>За текущий ранг</p>
+              <h3 id="rankIncomeAmount">₽0</h3>
+            </div>
+          </div>
+          <div class="chart">
+            <div class="chart-header">
+              <h3>Доход по дням</h3>
+              <select id="chartRange">
+                <option value="7">7 дней</option>
+                <option value="14" selected>14 дней</option>
+                <option value="30">30 дней</option>
+              </select>
+            </div>
+            <svg id="incomeChart" viewBox="0 0 600 200" preserveAspectRatio="none"></svg>
+          </div>
+        </section>
+
+        <section class="card expenses-card">
+          <div class="card-header">
+            <h2>Учёт расходов</h2>
+            <span class="chip" id="expensesCount">0</span>
+          </div>
+          <div class="form-grid">
+            <input type="number" id="expenseAmount" placeholder="Сумма" min="0" />
+            <input type="text" id="expenseCategory" placeholder="Категория" />
+            <input type="date" id="expenseDate" />
+            <input type="text" id="expenseNote" placeholder="Комментарий" />
+            <button class="secondary-button" id="addExpenseButton">Добавить расход</button>
+          </div>
+          <div class="expenses-list" id="expensesList"></div>
+        </section>
+
+        <section class="card goals-card">
+          <div class="card-header">
+            <h2>Цели накопления</h2>
+            <span class="chip" id="goalsCount">0</span>
+          </div>
+          <div class="form-grid">
+            <input type="text" id="goalName" placeholder="Название цели" />
+            <input type="number" id="goalTarget" placeholder="Стоимость" min="0" />
+            <input type="number" id="goalSaved" placeholder="Накоплено" min="0" />
+            <button class="primary-button" id="addGoalButton">Добавить цель</button>
+          </div>
+          <div class="goals-list" id="goalsList"></div>
+        </section>
+
+        <section class="card data-card">
+          <div class="card-header">
+            <h2>Данные</h2>
+            <span class="chip" id="lastBackup">Нет резервной копии</span>
+          </div>
+          <div class="data-actions">
+            <button class="secondary-button" id="exportButton">Экспорт</button>
+            <label class="ghost-button">
+              Импорт
+              <input type="file" id="importInput" accept="application/json" />
+            </label>
+            <button class="ghost-button" id="backupButton">Резервная копия</button>
+            <button class="ghost-button" id="resetButton">Сброс</button>
+          </div>
+          <div class="backup-list" id="backupList"></div>
+        </section>
+      </main>
+    </div>
+    <script src="app.js"></script>
+  </body>
+</html>
